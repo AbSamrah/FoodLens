@@ -72,6 +72,7 @@ FoodLens employs a "Vision-to-Reasoning" pipeline to ensure accuracy beyond simp
 1. Load the `main.py` script into a Google Colab notebook with a T4 GPU.
 2. Install dependencies: `pip install fastapi uvicorn pyngrok google-generativeai transformers`.
 3. Launch the server and copy the provided Ngrok URL to the backend configuration.
+4. Set your Google Gemini API key: open `main_py.py` and replace the `YOUR_GEMINI_API_KEY_HERE` placeholder with your key or set the environment variable `GEMINI_API_KEY` before running the service.
 
 ---
 

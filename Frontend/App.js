@@ -1,17 +1,21 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { AuthContext, AuthProvider } from "./src/context/AuthContext";
 
 // Screens
 import CameraScreen from "./src/screens/CameraScreen";
+import HomeScreen from "./src/screens/HomeScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
 import HistoryScreen from "./src/screens/HistoryScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 
 // Stack for Unauthenticated users
 const AuthStack = () => (
@@ -21,26 +25,64 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
-// Stack for Authenticated users
-const MainAppStack = () => (
-  <Stack.Navigator>
-    <Stack.Screen
-      name="Camera"
-      component={CameraScreen}
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen
-      name="History"
-      component={HistoryScreen}
-      options={{ title: "My Food Log" }}
-    />
-    <Stack.Screen
-      name="Profile"
-      component={ProfileScreen}
-      options={{ title: "Settings" }}
-    />
-  </Stack.Navigator>
-);
+// Bottom Tabs for Authenticated users (icons + history badge)
+const MainAppStack = () => {
+  const [historyCount, setHistoryCount] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const { getFoodHistory } = await import("./src/api/foodService");
+        const data = await getFoodHistory();
+        if (mounted && Array.isArray(data)) setHistoryCount(data.length);
+      } catch (err) {
+        console.warn("Failed to load history for badge", err);
+      }
+    };
+    load();
+    return () => (mounted = false);
+  }, []);
+
+  return (
+    <Tab.Navigator
+      initialRouteName="Home"
+      screenOptions={({ route }) => ({
+        headerShown: route.name === "Home",
+        tabBarIcon: ({ color, size }) => {
+          let name = "home";
+          if (route.name === "Camera") name = "camera";
+          else if (route.name === "History") name = "book";
+          else if (route.name === "Profile") name = "person";
+          return <Ionicons name={name} size={size} color={color} />;
+        },
+      })}>
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: "Home" }}
+      />
+      <Tab.Screen
+        name="Camera"
+        component={CameraScreen}
+        options={{ title: "Scan" }}
+      />
+      <Tab.Screen
+        name="History"
+        component={HistoryScreen}
+        options={{
+          title: "History",
+          tabBarBadge: historyCount > 0 ? historyCount : undefined,
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ title: "Profile" }}
+      />
+    </Tab.Navigator>
+  );
+};
 
 const AppNavigator = () => {
   const { isLoading, userToken } = useContext(AuthContext);

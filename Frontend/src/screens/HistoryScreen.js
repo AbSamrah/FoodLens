@@ -7,6 +7,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { getFoodHistory } from "../api/foodService";
 
 export default function HistoryScreen() {
@@ -41,7 +42,8 @@ export default function HistoryScreen() {
 
   const renderDailyLog = ({ item }) => {
     const dateObj = new Date(item.date);
-    const dateString = dateObj.toLocaleDateString(undefined, {
+    // always show English format regardless of device locale
+    const dateString = dateObj.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -72,7 +74,7 @@ export default function HistoryScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList
         data={history}
         keyExtractor={(item) => item.id.toString()}
@@ -84,7 +86,7 @@ export default function HistoryScreen() {
           </Text>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -7,12 +7,15 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Platform,
 } from "react-native";
 import { CameraView, Camera } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { analyzeFoodImage } from "../api/foodService";
+import * as FileSystem from "expo-file-system";
 
-const App = () => {
+const CameraScreen = () => {
   const [loading, setLoading] = useState(false);
   const [cameraPermission, setCameraPermission] = useState(null);
   const [libraryPermission, setLibraryPermission] = useState(null);
@@ -34,7 +37,23 @@ const App = () => {
   const analyzeUri = async (uri) => {
     try {
       setLoading(true);
-      const result = await analyzeFoodImage(uri);
+      let normalized = uri;
+      // if we get an Android content URI, copy to cache first
+      if (Platform.OS === "android" && uri.startsWith("content://")) {
+        try {
+          const fname = uri.split("/").pop() || "temp.jpg";
+          const dest = FileSystem.cacheDirectory + fname;
+          console.log("Copying content uri to cache:", uri, "->", dest);
+          await FileSystem.copyAsync({ from: uri, to: dest });
+          normalized = dest;
+        } catch (e) {
+          console.warn(
+            "Failed to copy content uri, will try upload directly",
+            e
+          );
+        }
+      }
+      const result = await analyzeFoodImage(normalized);
       console.log("AI Pipeline Result:", result);
 
       // Normalize and handle either legacy or new daily-log response shape
@@ -62,10 +81,12 @@ const App = () => {
       }
     } catch (error) {
       console.error("Analysis Error:", error);
-      Alert.alert(
-        "Analysis Failed",
-        "Ensure your backend is reachable and try again."
-      );
+      // Try to show server-provided message when available
+      const msg =
+        error?.message ||
+        (error?.original && error.original.message) ||
+        "Ensure your backend is reachable and try again.";
+      Alert.alert("Analysis Failed", msg);
     } finally {
       setLoading(false);
     }
@@ -91,26 +112,102 @@ const App = () => {
   };
 
   const pickImage = async () => {
-    if (!libraryPermission) {
-      Alert.alert(
-        "Permission required",
-        "App needs access to your photo library to choose an image."
-      );
-      return;
-    }
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        quality: 0.7,
-        base64: false,
-      });
-      if (!result.canceled && result.assets.length > 0) {
-        console.log("Picked URI:", result.assets[0].uri);
-        await analyzeUri(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error("Library pick error", error);
-    }
+    console.log("pickImage invoked");
+    // Offer choice: Photo Library or Files (to let user pick which app)
+    Alert.alert("Choose Source", "Select where to pick the image from", [
+      {
+        text: "Photo Library",
+        onPress: async () => {
+          console.log("Photo Library selected");
+          if (!libraryPermission) {
+            Alert.alert(
+              "Permission required",
+              "App needs access to your photo library to choose an image."
+            );
+            return;
+          }
+          try {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ["image"],
+              quality: 0.7,
+              base64: false,
+            });
+            if (!result.canceled && result.assets.length > 0) {
+              console.log("Picked URI:", result.assets[0].uri);
+              await analyzeUri(result.assets[0].uri);
+            }
+          } catch (error) {
+            console.error("Library pick error", error);
+          }
+        },
+      },
+      {
+        text: "Choose App...",
+        onPress: async () => {
+          console.log("Choose App selected");
+          try {
+            console.log("Opening DocumentPicker.getDocumentAsync...");
+            const res = await DocumentPicker.getDocumentAsync({
+              type: "image/*",
+            });
+            console.log("DocumentPicker returned:", res);
+            try {
+              // If user cancelled, do nothing
+              if (res && (res.canceled === true || res.type === "cancel")) {
+                console.log("Document picker canceled by user");
+                return;
+              }
+
+              // Normalize URI from possible shapes: { uri } or { assets: [{ uri }] }
+              const documentUri =
+                (res && typeof res.uri === "string" && res.uri) ||
+                (res && res.assets && res.assets[0] && res.assets[0].uri) ||
+                null;
+
+              if (!documentUri) {
+                console.warn("DocumentPicker returned no usable URI", res);
+                Alert.alert(
+                  "Error",
+                  "Selected file has no accessible URI. Try a different app or file."
+                );
+                return;
+              }
+
+              console.log("Document picked:", documentUri);
+              setLoading(true);
+              Alert.alert("Processing", "Analyzing selected image...");
+
+              // If Android content URI, copy to cache first
+              let path = documentUri;
+              if (
+                Platform.OS === "android" &&
+                typeof path === "string" &&
+                path.startsWith("content://")
+              ) {
+                try {
+                  const fname = path.split("/").pop() || "pick.jpg";
+                  const dest = FileSystem.cacheDirectory + fname;
+                  console.log("copying for analysis", path, "->", dest);
+                  await FileSystem.copyAsync({ from: path, to: dest });
+                  path = dest;
+                } catch (copyErr) {
+                  console.warn("copy failed", copyErr);
+                }
+              }
+
+              await analyzeUri(path);
+            } catch (ex) {
+              console.error("Error handling DocumentPicker result", ex);
+              Alert.alert("Error", "Could not process selected file.");
+            }
+          } catch (error) {
+            console.error("Document picker error", error);
+            Alert.alert("Error", "Could not open document picker.");
+          }
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   if (cameraPermission === false) {
@@ -150,7 +247,7 @@ const App = () => {
         <View style={styles.resultCard}>
           <View style={styles.resultHeader}>
             <Text style={styles.resultDate}>
-              {new Date(lastLog.date).toLocaleString()}
+              {new Date(lastLog.date).toLocaleString("en-US")}
             </Text>
             <Text style={styles.resultTotal}>
               {Math.round(lastLog.totalDailyCalories)} kcal
@@ -275,4 +372,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default App;
+export default CameraScreen;

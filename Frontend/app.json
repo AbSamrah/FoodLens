@@ -2,6 +2,7 @@
   "expo": {
     "name": "Frontend",
     "slug": "Frontend",
+    "sdkVersion": "55.0.0",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +10,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        },
+        "NSCameraUsageDescription": "This app needs access to your camera to capture food photos.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to pick or save photos.",
+        "NSPhotoLibraryAddUsageDescription": "This app may save processed images to your photo library."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +28,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET"
+      ]
     },
     "web": {
       "output": "static",

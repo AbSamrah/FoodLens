@@ -55,6 +55,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient<IVisionApiService, VisionApiService>(client =>
 {
     client.BaseAddress = new Uri("https://lexical-ambidextrously-talisha.ngrok-free.dev");
+    client.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
 });
 builder.Services.AddScoped<IFoodLogRepository, FoodLogRepository>();
 builder.Services.AddScoped<IIngredientRepository, IngredientRepository>();

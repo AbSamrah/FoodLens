@@ -1,18 +1,19 @@
+import React, { useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useContext } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { AuthContext, AuthProvider } from "./src/context/AuthContext";
 
+// Screens
 import CameraScreen from "./src/screens/CameraScreen";
 import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
-
 import HistoryScreen from "./src/screens/HistoryScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 
 const Stack = createNativeStackNavigator();
 
+// Stack for Unauthenticated users
 const AuthStack = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="Login" component={LoginScreen} />
@@ -20,6 +21,7 @@ const AuthStack = () => (
   </Stack.Navigator>
 );
 
+// Stack for Authenticated users
 const MainAppStack = () => (
   <Stack.Navigator>
     <Stack.Screen
@@ -45,8 +47,8 @@ const AppNavigator = () => {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4CAF50" />
       </View>
     );
   }
@@ -65,3 +67,12 @@ export default function App() {
     </AuthProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
+  },
+});

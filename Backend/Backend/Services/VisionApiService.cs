@@ -36,12 +36,17 @@ namespace Backend.Services
             var labelsJson = JsonSerializer.Serialize(activeIngredients);
             content.Add(new StringContent(labelsJson), "candidate_labels");
 
+            if (!_httpClient.DefaultRequestHeaders.Contains("ngrok-skip-browser-warning"))
+            {
+                _httpClient.DefaultRequestHeaders.Add("ngrok-skip-browser-warning", "true");
+            }
 
             var response = await _httpClient.PostAsync("api/analyze-food", content);
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception("Computer vision pipeline failed.");
+                var errorDetails = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Status: {response.StatusCode} | Details: {errorDetails}");
             }
 
             var jsonResponse = await response.Content.ReadAsStringAsync();

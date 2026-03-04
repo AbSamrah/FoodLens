@@ -1,4 +1,5 @@
-﻿using Backend.Interfaces;
+﻿using Backend.DTOs;
+using Backend.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -20,7 +21,7 @@ namespace Backend.Controllers
         }
 
         [HttpPost("analyze")]
-        public async Task<IActionResult> AnalyzeFoodImage(IFormFile image)
+        public async Task<IActionResult> AnalyzeFoodImage([FromForm] IFormFile image)
         {
             if (image == null || image.Length == 0)
                 return BadRequest(new { Error = "No image file was provided." });
@@ -42,7 +43,21 @@ namespace Backend.Controllers
 
                 var savedLog = await _foodLogRepository.AddFoodLogAsync(currentUserId, aiResult);
 
-                return Ok(savedLog);
+                var logDto = new DailyFoodLogDto
+                {
+                    Id = savedLog.Id,
+                    Date = savedLog.Date,
+                    TotalDailyCalories = savedLog.TotalDailyCalories,
+                    FoodItems = savedLog.FoodItems.Select(item => new LoggedFoodItemDto
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        EstimatedGrams = item.EstimatedGrams,
+                        Calories = item.Calories
+                    }).ToList()
+                };
+
+                return Ok(logDto);
             }
             catch (Exception ex)
             {
@@ -62,7 +77,21 @@ namespace Backend.Controllers
 
                 var history = await _foodLogRepository.GetUserLogsAsync(currentUserId);
 
-                return Ok(history);
+                var historyDtos = history.Select(log => new DailyFoodLogDto
+                {
+                    Id = log.Id,
+                    Date = log.Date,
+                    TotalDailyCalories = log.TotalDailyCalories,
+                    FoodItems = log.FoodItems.Select(item => new LoggedFoodItemDto
+                    {
+                        Id = item.Id,
+                        Name = item.Name,
+                        EstimatedGrams = item.EstimatedGrams,
+                        Calories = item.Calories
+                    }).ToList()
+                }).ToList();
+
+                return Ok(historyDtos);
             }
             catch (Exception ex)
             {

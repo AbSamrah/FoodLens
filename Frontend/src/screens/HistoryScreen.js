@@ -40,13 +40,56 @@ export default function HistoryScreen() {
     </View>
   );
 
+  // Format a date string using device local timezone & locale.
+  // Handles Date objects, numeric epochs (seconds or ms), .NET "/Date(...)\/" and ISO strings
+  // that may be missing a timezone (assume UTC in that case).
+  const formatToLocal = (dateStr, options) => {
+    if (dateStr == null || dateStr === "") return "";
+
+    // Already a Date
+    if (dateStr instanceof Date)
+      return dateStr.toLocaleString("en-US", options);
+
+    // Numeric epoch (seconds or milliseconds)
+    if (typeof dateStr === "number" || /^-?\d+$/.test(String(dateStr))) {
+      const num = Number(dateStr);
+      // If value looks like seconds (<= 10 digits) convert to ms
+      const ms = Math.abs(num) <= 9999999999 ? num * 1000 : num;
+      const d = new Date(ms);
+      if (!isNaN(d.getTime())) return d.toLocaleString("en-US", options);
+    }
+
+    let s = String(dateStr);
+
+    // Handle .NET JSON format with optional offset: /Date(123456789+0000)/
+    const msMatch = /\/Date\((-?\d+)(?:[+-]\d+)?\)\//.exec(s);
+    if (msMatch) {
+      const d = new Date(parseInt(msMatch[1], 10));
+      if (!isNaN(d.getTime())) return d.toLocaleString("en-US", options);
+    }
+
+    // If ISO string missing timezone (e.g. "2026-03-04T12:34:56"),
+    // treat it as UTC by appending 'Z' so Date parses it as UTC.
+    const isoNoTZ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?$/;
+    if (isoNoTZ.test(s)) s = s + "Z";
+
+    const d = new Date(s);
+    if (isNaN(d.getTime())) {
+      // fallback: return original string
+      return s;
+    }
+
+    return d.toLocaleString("en-US", options);
+  };
+
   const renderDailyLog = ({ item }) => {
-    const dateObj = new Date(item.date);
-    // always show English format regardless of device locale
-    const dateString = dateObj.toLocaleDateString("en-US", {
+    // show date/time using the device's local timezone/locale
+    const dateString = formatToLocal(item.date, {
       weekday: "short",
       month: "short",
       day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
 
     return (

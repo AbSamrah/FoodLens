@@ -22,6 +22,12 @@ const CameraScreen = () => {
   const [lastLog, setLastLog] = useState(null);
   const cameraRef = useRef(null);
 
+  // Format a date string using device local timezone but always use English locale
+  const formatToLocal = (dateStr, options) => {
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-US", options);
+  };
+
   // request permissions when component mounts
   React.useEffect(() => {
     (async () => {
@@ -247,11 +253,22 @@ const CameraScreen = () => {
         <View style={styles.resultCard}>
           <View style={styles.resultHeader}>
             <Text style={styles.resultDate}>
-              {new Date(lastLog.date).toLocaleString("en-US")}
+              {formatToLocal(lastLog.date, {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
             </Text>
             <Text style={styles.resultTotal}>
               {Math.round(lastLog.totalDailyCalories)} kcal
             </Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setLastLog(null)}>
+              <Text style={styles.closeText}>×</Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.resultDivider} />
           <ScrollView style={styles.itemsList}>
@@ -369,6 +386,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     textAlign: "right",
+  },
+  closeButton: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    padding: 4,
+    zIndex: 10,
+  },
+  closeText: {
+    fontSize: 20,
+    color: "#333",
+    fontWeight: "bold",
   },
 });
 
